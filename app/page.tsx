@@ -29,7 +29,7 @@ export default function Home() {
       client,
       walletAddress,
       decimals: 0,
-      isFreezeAuthority: false,
+      isFreezeAuthority: true,
     });
     try {
       const { signature } = await signAndSendTransaction({
