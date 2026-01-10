@@ -1,73 +1,165 @@
 "use client";
 
-import { useConnectWallet } from "@privy-io/react-auth";
-import {
-  useWallets,
-  useSignAndSendTransaction,
-} from "@privy-io/react-auth/solana";
-import { address, generateKeyPairSigner } from "@solana/kit";
+import { useSignAndSendTransaction } from "@privy-io/react-auth/solana";
+import { address, type KeyPairSigner } from "@solana/kit";
 import bs58 from "bs58";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/client";
 import { createMintTransactionMessage } from "@/lib/solana";
+import { useSolanaWallet } from "@/components/providers/solana-wallet-provider";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group";
+import { MintCloseAuthority } from "@/components/extensions/mint-close-authority";
+import { RefreshCwIcon, CircleXIcon } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { useGenerateKeyPairSigner } from "@/hooks/use-generate-mint";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { PermanentDelegate } from "@/components/extensions/permanent-delegate";
+import { MetadataPointer } from "@/components/extensions/metadata-pointer";
+import { TokenMetadata } from "@/components/extensions/token-metadata";
+import { useForm } from "react-hook-form";
 
+interface FormFields {
+  mintAddress: string;
+  mintAuthorityAddress: string;
+  freezeAuthorityAddress: string;
+}
 export default function Home() {
-  const [client] = useState(createClient);
-  const { wallets, ready } = useWallets();
-  const { connectWallet } = useConnectWallet();
-  const { signAndSendTransaction } = useSignAndSendTransaction();
-  const [transactionSignature, setTransactionSignature] = useState<
-    string | null
-  >(null);
-  const wallet = useMemo(() => wallets[0], [wallets]);
+  const [mint, generateNewMint] = useGenerateKeyPairSigner();
+  const [hasFreezeAuthority, setHasFreezeAuthority] = useState(true);
 
-  async function handleClick() {
-    const mintKeyPairSigner = await generateKeyPairSigner();
-    const walletAddress = address(wallet.address);
-    const transaction = await createMintTransactionMessage({
-      mintKeyPairSigner,
-      client,
-      walletAddress,
-      decimals: 0,
-      isFreezeAuthority: true,
-    });
-    try {
-      const { signature } = await signAndSendTransaction({
-        transaction,
-        wallet,
-      });
-      setTransactionSignature(bs58.encode(signature));
-    } catch (err) {
-      console.error(err);
-    }
-  }
+  const { wallet, ready } = useSolanaWallet();
 
   return (
-    <div className="flex items-center justify-center h-screen flex-col text-black bg-red-100">
-      <button
-        disabled={!ready}
-        onClick={() =>
-          connectWallet({ description: "Using Privy as wallet adapter" })
-        }
-        className="p-1 border disabled:opacity-50 text-black"
-      >
-        {wallet ? wallet.address.slice(0, 4) : "Connect"}
-      </button>
+    <form className="pt-20  min-h-screen bg-background text-foreground">
+      <div>
+        <Label htmlFor="mint-address">Mint address</Label>
+        <InputGroup>
+          <InputGroupInput
+            id="mint-address"
+            placeholder="Your mint address"
+            value={mint ? mint.address : ""}
+            disabled
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton onClick={generateNewMint}>
+              {!mint && <Spinner />}
+              <RefreshCwIcon />
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
+      </div>
 
-      {wallet && (
+      <div>
+        <Label htmlFor="mint-authority-address">Mint Authority address</Label>
+        <InputGroup>
+          <InputGroupInput
+            id="mint-authority-address"
+            placeholder="Enter you mint authority address"
+            value={mintAuthorityAddress === null ? "" : mintAuthorityAddress}
+            onChange={(e) => setMintAuthorityAddress(e.target.value)}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              className={cn(
+                mintAuthorityAddress === wallet?.address && "bg-accent "
+              )}
+              onClick={() => setMintAuthorityAddress(wallet.address)}
+              disabled={!ready && !wallet}
+            >
+              <InputGroupText>Set to wallet address</InputGroupText>
+            </InputGroupButton>
+            <InputGroupButton onClick={() => setMintAuthorityAddress(null)}>
+              <CircleXIcon />
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
+      </div>
+
+      <div>
         <button
-          disabled={!ready}
-          onClick={() => wallet.disconnect()}
-          className="p-1 border disabled:opacity-50"
+          className="p-1 border-2"
+          onClick={handleIsFreezeAuthorityToggle}
         >
-          Disconnect
+          {isFreezeAuthority ? "On" : "Off"}
         </button>
-      )}
+        <Label htmlFor="freeze-authority-address">Freeze authority</Label>
+        <InputGroup>
+          <InputGroupInput
+            id="freeze-authority-address"
+            placeholder="Enter you freeze authority address"
+            disabled={!isFreezeAuthority}
+            value={
+              isFreezeAuthority
+                ? freezeAuthorityAddress !== null
+                  ? freezeAuthorityAddress
+                  : ""
+                : ""
+            }
+            onChange={(e) => setFreezeAuthorityAddress(e.target.value)}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              className={cn(
+                freezeAuthorityAddress === wallet?.address && "bg-accent "
+              )}
+              onClick={() => setFreezeAuthorityAddress(wallet.address)}
+              disabled={!ready || !wallet || !isFreezeAuthority}
+            >
+              <InputGroupText>Set to wallet address</InputGroupText>
+            </InputGroupButton>
+            <InputGroupButton
+              disabled={!isFreezeAuthority}
+              onClick={() => setFreezeAuthorityAddress(null)}
+            >
+              <CircleXIcon />
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
+      </div>
 
-      <button className="border p-1" disabled={!ready} onClick={handleClick}>
+      <div>
+        <Label htmlFor="decimals">Decimals</Label>
+        <InputGroup>
+          <InputGroupInput
+            id="decimals"
+            placeholder="Enter the decimals"
+            value={typeof decimals === "number" ? decimals : ""}
+            type="number"
+            max={9}
+            min={0}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === "") {
+                setDecimals(null);
+              } else {
+                setDecimals(Number(value[value.length - 1]));
+              }
+            }}
+          />
+        </InputGroup>
+      </div>
+      <div className="p-1">
+        <h2>Extensions</h2>
+        <MintCloseAuthority />
+        <PermanentDelegate />
+        <MetadataPointer />
+        <TokenMetadata />
+      </div>
+      <button
+        className="border p-1 disabled:opacity-50"
+        disabled={!ready || !wallet}
+        // onClick={handleClick}
+      >
         Click to creat mint.
       </button>
-      {transactionSignature}
-    </div>
+      {/* {transactionSignature} */}
+    </form>
   );
 }

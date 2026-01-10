@@ -30,8 +30,10 @@ import {
   AccountState,
   getInitializeDefaultAccountStateInstruction,
   getInitializeMintCloseAuthorityInstruction,
+  getInitializeGroupMemberPointerInstruction,
   getInitializeTokenGroupInstruction,
   getInitializeGroupPointerInstruction,
+  getInitializeTokenGroupMemberInstruction,
 } from "@solana-program/token-2022";
 import { Client } from "@/client";
 
@@ -46,29 +48,19 @@ type CreateMintTransactionMessage = Omit<
 };
 
 type TokenMetadataExtension = {
-  mintAccountAsMetadataAccount: boolean;
-  args: {
-    updateAuthority: Address;
-    mint: Address;
-    name: string;
-    symbol: string;
-    uri: string;
-    additionalMetadata: Map<string, string>;
-  };
+  updateAuthority: Address;
+  // mint: Address;
+  name: string;
+  symbol: string;
+  uri: string;
 };
 
 type NonTransferableMintExtension = {};
 type MetadataPointerExtension = {
-  mintAccountAsMetadataAccount: boolean;
-  args: {
-    authority: OptionOrNullable<Address>;
-    metadataAddress: OptionOrNullable<Address>;
-  };
+  authority: Address;
 };
 type PermanentDelegateExtension = {
-  args: {
-    delegate: Address;
-  };
+  delegate: Address;
 };
 
 type TransferFeeConfigExtension = {
@@ -97,9 +89,7 @@ interface DefaultAccountStateExtension {
 }
 
 interface MintCloseAuthorityExtension {
-  args: {
-    closeAuthority: Address;
-  };
+  closeAuthority: Address;
 }
 
 interface GroupPointerExtension {
@@ -118,13 +108,17 @@ interface TokenGroupExtension {
 }
 
 interface TokenGroupMemberExtension {
-  member: Address;
-  group: Address;
-  memberNumber: Address;
+  args: {
+    mint: Address;
+    group: Address;
+    memberNumber: number;
+  };
 }
 interface GroupMemberPointerExtension {
-  authority: Address;
-  memberAddress: Address;
+  args: {
+    authority: Address;
+    memberAddress: Address;
+  };
 }
 interface MintExtensions {
   TokenMetadata?: TokenMetadataExtension;
@@ -155,28 +149,17 @@ const createMintTransactionMessage = async (
 
   const mintExtensions: MintExtensions = {
     TokenMetadata: {
-      mintAccountAsMetadataAccount: false,
-      args: {
-        updateAuthority: walletAddress,
-        mint: mintAddress,
-        name: "Yash",
-        symbol: "Ostwal",
-        uri: "https://raw.githubusercontent.com/solana-developers/opos-asset/main/assets/DeveloperPortal/metadata.json",
-        additionalMetadata: new Map(),
-      },
+      updateAuthority: walletAddress,
+      name: "Yash",
+      symbol: "Ostwal",
+      uri: "https://raw.githubusercontent.com/solana-developers/opos-asset/main/assets/DeveloperPortal/metadata.json",
     },
     MetadataPointer: {
-      mintAccountAsMetadataAccount: false,
-      args: {
-        metadataAddress: mintAddress, //can point to an external metadata account.
-        authority: walletAddress,
-      },
+      authority: walletAddress,
     },
     NonTransferableMint: {},
     PermanentDelegate: {
-      args: {
-        delegate: walletAddress,
-      },
+      delegate: walletAddress,
     },
     TransferFeeConfig: {
       args: {
@@ -212,9 +195,7 @@ const createMintTransactionMessage = async (
       },
     },
     MintCloseAuthority: {
-      args: {
-        closeAuthority: walletAddress,
-      },
+      closeAuthority: walletAddress,
     },
     GroupPointer: {
       args: {
@@ -230,6 +211,19 @@ const createMintTransactionMessage = async (
         maxSize: 10,
       },
     },
+    GroupMemberPointer: {
+      args: {
+        authority: walletAddress,
+        memberAddress: mintAddress,
+      },
+    },
+    TokenGroupMember: {
+      args: {
+        memberNumber: 1,
+        group: address("AUFGgoM3V4L61M7XLwZPDdtgcm8dLyyDS6yKATBxhsDb"),
+        mint: mintAddress,
+      },
+    },
   };
 
   const getInstructionsBeforeMintInitialization = (
@@ -239,7 +233,8 @@ const createMintTransactionMessage = async (
     if (extensions["MetadataPointer"]) {
       const initializeMetadataPointerIxn =
         getInitializeMetadataPointerInstruction({
-          ...extensions["MetadataPointer"].args,
+          ...extensions["MetadataPointer"],
+          metadataAddress: mintAddress, //can point to an external metadata account.
           mint: mintAddress,
         });
       instructionsBeforeMintInitialization.push(initializeMetadataPointerIxn);
@@ -259,7 +254,7 @@ const createMintTransactionMessage = async (
       const initializePermanentDelegateIxn =
         getInitializePermanentDelegateInstruction({
           mint: mintAddress,
-          ...extensions["PermanentDelegate"].args,
+          ...extensions["PermanentDelegate"],
         });
       instructionsBeforeMintInitialization.push(initializePermanentDelegateIxn);
     }
@@ -313,19 +308,7 @@ const createMintTransactionMessage = async (
       const initializeMintCloseAuthorityIxn =
         getInitializeMintCloseAuthorityInstruction({
           mint: mintAddress,
-          ...extensions["MintCloseAuthority"].args,
-        });
-
-      instructionsBeforeMintInitialization.push(
-        initializeMintCloseAuthorityIxn
-      );
-    }
-
-    if (extensions["MintCloseAuthority"]) {
-      const initializeMintCloseAuthorityIxn =
-        getInitializeMintCloseAuthorityInstruction({
-          mint: mintAddress,
-          ...extensions["MintCloseAuthority"].args,
+          ...extensions["MintCloseAuthority"],
         });
 
       instructionsBeforeMintInitialization.push(
@@ -341,6 +324,19 @@ const createMintTransactionMessage = async (
 
       instructionsBeforeMintInitialization.push(initializeGroupPointerIxn);
     }
+
+    if (extensions["GroupMemberPointer"]) {
+      const initializeGroupMemberPointerIxn =
+        getInitializeGroupMemberPointerInstruction({
+          mint: mintAddress,
+          ...extensions["GroupMemberPointer"].args,
+        });
+
+      instructionsBeforeMintInitialization.push(
+        initializeGroupMemberPointerIxn
+      );
+    }
+
     return instructionsBeforeMintInitialization;
   };
 
@@ -351,10 +347,11 @@ const createMintTransactionMessage = async (
     const extensionsForRentCalculation = [];
     const extensionsForSpaceCalculation = [];
     if (extensionArgs?.["TokenMetadata"]) {
-      const tokenMetadataExtension = extension(
-        "TokenMetadata",
-        extensionArgs["TokenMetadata"].args
-      );
+      const tokenMetadataExtension = extension("TokenMetadata", {
+        ...extensionArgs["TokenMetadata"],
+        mint: mintAddress,
+        additionalMetadata: new Map(),
+      });
       extensionsForRentCalculation.push(tokenMetadataExtension);
       //initialized after mint intiialization. only contributes to rent.
     }
@@ -362,7 +359,7 @@ const createMintTransactionMessage = async (
     if (extensionArgs?.["MetadataPointer"]) {
       const metadataPointerExtension = extension(
         "MetadataPointer",
-        extensionArgs["MetadataPointer"].args
+        { ...extensionArgs["MetadataPointer"], metadataAddress: mintAddress } //can point to an external metadata account.
       );
 
       extensionsForSpaceCalculation.push(metadataPointerExtension);
@@ -377,7 +374,7 @@ const createMintTransactionMessage = async (
 
     if (extensionArgs?.["PermanentDelegate"]) {
       const permanentDelegateExtension = extension("PermanentDelegate", {
-        ...extensionArgs["PermanentDelegate"].args,
+        ...extensionArgs["PermanentDelegate"],
       });
       extensionsForRentCalculation.push(permanentDelegateExtension);
       extensionsForSpaceCalculation.push(permanentDelegateExtension);
@@ -415,7 +412,7 @@ const createMintTransactionMessage = async (
     if (extensionArgs?.["MintCloseAuthority"]) {
       const mintCloseAuthorityExtension = extension(
         "MintCloseAuthority",
-        extensionArgs["MintCloseAuthority"].args
+        extensionArgs["MintCloseAuthority"]
       );
 
       extensionsForRentCalculation.push(mintCloseAuthorityExtension);
@@ -438,11 +435,26 @@ const createMintTransactionMessage = async (
       extensionsForRentCalculation.push(TokenGroupExtension);
     }
 
-    if (extensionArgs?.[""])
-      const mintSpace =
-        extensionsForSpaceCalculation.length > 0
-          ? getMintSize(extensionsForSpaceCalculation)
-          : getMintSize();
+    if (extensionArgs?.["GroupMemberPointer"]) {
+      const groupMemberPointerExtension = extension(
+        "GroupMemberPointer",
+        extensionArgs["GroupMemberPointer"].args
+      );
+      extensionsForRentCalculation.push(groupMemberPointerExtension);
+      extensionsForSpaceCalculation.push(groupMemberPointerExtension);
+    }
+    if (extensionArgs?.["TokenGroupMember"]) {
+      const tokenGroupMemberExtension = extension(
+        "TokenGroupMember",
+        extensionArgs["TokenGroupMember"].args
+      );
+      extensionsForRentCalculation.push(tokenGroupMemberExtension);
+    }
+
+    const mintSpace =
+      extensionsForSpaceCalculation.length > 0
+        ? getMintSize(extensionsForSpaceCalculation)
+        : getMintSize();
 
     const mintRent = await client.rpc
       .getMinimumBalanceForRentExemption(
@@ -486,7 +498,8 @@ const createMintTransactionMessage = async (
     const instructionsAfterMintInitialization = [];
     if (extensions["TokenMetadata"]) {
       const intializeTokenMetadataIxn = getInitializeTokenMetadataInstruction({
-        ...extensions["TokenMetadata"].args,
+        ...extensions["TokenMetadata"],
+        mint: mintAddress,
         metadata: mintAddress,
         mintAuthority: walletSigner,
       });
@@ -502,6 +515,19 @@ const createMintTransactionMessage = async (
       });
       instructionsAfterMintInitialization.push(intializeTokenGroupIxn);
     }
+
+    if (extensions["TokenGroupMember"]) {
+      const { group, mint: memberMint } = extensions["TokenGroupMember"].args;
+      const initialiseTokenGroupMemberIxn =
+        getInitializeTokenGroupMemberInstruction({
+          member: mintAddress,
+          memberMint,
+          memberMintAuthority: walletSigner,
+          group: group, // References the group mint
+          groupUpdateAuthority: walletSigner,
+        });
+      instructionsAfterMintInitialization.push(initialiseTokenGroupMemberIxn);
+    }
     return instructionsAfterMintInitialization;
   };
 
@@ -511,13 +537,15 @@ const createMintTransactionMessage = async (
     initializeMintIxn,
     ...getInstructionsAfterMintInitialization(mintExtensions),
   ];
-  const transactionMessage = await pipe(
-    createTransactionMessage({ version: 0 }),
-    (tx) => setTransactionMessageFeePayer(address(walletAddress), tx),
-    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-    (tx) => appendTransactionMessageInstructions(ixns, tx),
-    (tx) => client.estimateAndSetComputeUnitLimit(tx)
-  );
+  const transactionMessage =
+    // await
+    pipe(
+      createTransactionMessage({ version: 0 }),
+      (tx) => setTransactionMessageFeePayer(address(walletAddress), tx),
+      (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+      (tx) => appendTransactionMessageInstructions(ixns, tx)
+      // (tx) => client.estimateAndSetComputeUnitLimit(tx)
+    );
 
   const partialSignedTransactionMessage =
     await partiallySignTransactionMessageWithSigners(transactionMessage);

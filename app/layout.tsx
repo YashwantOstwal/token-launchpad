@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SolanaWalletProvider } from "@/components/solana-wallet-provider";
-
+import { SolanaConnectionProvider } from "@/components/providers/solana-connection-provider";
+import { SolanaWalletProvider } from "@/components/providers/solana-wallet-provider";
+import { Navbar } from "@/components/navbar";
+import { TokenCreationFormProvider } from "@/components/providers/token-creation-form";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -28,7 +30,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SolanaWalletProvider>{children}</SolanaWalletProvider>
+        <SolanaConnectionProvider>
+          <SolanaWalletProvider>
+            <TokenCreationFormProvider>
+              <Navbar />
+              {children}
+            </TokenCreationFormProvider>
+          </SolanaWalletProvider>
+        </SolanaConnectionProvider>
       </body>
     </html>
   );
