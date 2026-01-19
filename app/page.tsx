@@ -3,163 +3,193 @@
 import { useSignAndSendTransaction } from "@privy-io/react-auth/solana";
 import { address, type KeyPairSigner } from "@solana/kit";
 import bs58 from "bs58";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/client";
 import { createMintTransactionMessage } from "@/lib/solana";
 import { useSolanaWallet } from "@/components/providers/solana-wallet-provider";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-  InputGroupText,
-} from "@/components/ui/input-group";
-import { MintCloseAuthority } from "@/components/extensions/mint-close-authority";
-import { RefreshCwIcon, CircleXIcon } from "lucide-react";
-import { Label } from "@/components/ui/label";
 import { useGenerateKeyPairSigner } from "@/hooks/use-generate-mint";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-import { PermanentDelegate } from "@/components/extensions/permanent-delegate";
-import { MetadataPointer } from "@/components/extensions/metadata-pointer";
+import { useMintCreationForm } from "@/components/providers/token-creation-form";
+import { BaseForm } from "@/components/base-form";
+import { MintAddress } from "@/components/mint-address";
+import { MintCloseAuthority } from "@/components/extensions/mint-close-authority";
 import { TokenMetadata } from "@/components/extensions/token-metadata";
-import { useForm } from "react-hook-form";
+import { TransferFeeConfig } from "@/components/extensions/transfer-fee-config";
+import { InterestBearingTokens } from "@/components/extensions/interest-bearing-tokens";
+import { DefaultAccountState } from "@/components/extensions/default-account-state";
+import { NonTransferable } from "@/components/extensions/non-transferable";
+import { TokenGroup } from "@/components/extensions/token-group";
+import { GroupPointer } from "@/components/extensions/group-pointer";
+import { MetadataPointer } from "@/components/extensions/metadata-pointer";
+import { PermanentDelegate } from "@/components/extensions/permanent-delegate";
 
-interface FormFields {
-  mintAddress: string;
-  mintAuthorityAddress: string;
-  freezeAuthorityAddress: string;
-}
+/* 
+Todo:
+creating a mint with them.
+save draft in local storage.
+update the url params with inputs updating it on mount logic.
+
+maximum fee validation with .superRefine();
+disclaimer: tokenMetadata, groupMint, memberMint extension requires signing from mintAuthority, so recommned you to set this field to the walletAddress so you can sign the transaction.
+
+disclaimer: Default state extension requires Freeze Authority, Mandatory if you want to 
+enable default state extension.
+*/
 export default function Home() {
-  const [mint, generateNewMint] = useGenerateKeyPairSigner();
-  const [hasFreezeAuthority, setHasFreezeAuthority] = useState(true);
+  const [client] = useState(createClient);
+  const [allExtensions] = useState({
+    mintCloseAuthority: <MintCloseAuthority />,
+    defaultAccountState: <DefaultAccountState />,
+    groupPointer: <GroupPointer />,
+    interestBearingTokens: <InterestBearingTokens />,
+    metadataPointer: <MetadataPointer />,
+    nonTransferable: <NonTransferable />,
+    PermanentDelegate: <PermanentDelegate />,
+    tokenGroup: <TokenGroup />,
+    tokenMetadata: <TokenMetadata />,
+    transferFeeConfig: <TransferFeeConfig />,
+  });
 
+  const [mint, generateNewMint] = useGenerateKeyPairSigner();
   const { wallet, ready } = useSolanaWallet();
+  const { handleSubmit } = useMintCreationForm();
+  const [enabledExtensions, setEnabledExtensions] = useState<
+    Record<keyof typeof allExtensions, boolean>
+  >({
+    mintCloseAuthority: false,
+    defaultAccountState: false,
+    groupPointer: false,
+    interestBearingTokens: false,
+    metadataPointer: false,
+    nonTransferable: false,
+    PermanentDelegate: false,
+    tokenGroup: false,
+    tokenMetadata: false,
+    transferFeeConfig: false,
+  });
+
+  const onSubmit = handleSubmit(async (data) => {
+    if (mint == null) return;
+    // const mintExtensions: MintExtensions = {
+    //   TokenMetadata: {
+    //     updateAuthority: walletAddress,
+    //     name: "Yash",
+    //     symbol: "Ostwal",
+    //     uri: "https://raw.githubusercontent.com/solana-developers/opos-asset/main/assets/DeveloperPortal/metadata.json",
+    //   },
+    //   MetadataPointer: {
+    //     authority: walletAddress,
+    //   },
+    //   NonTransferableMint: {},
+    //   PermanentDelegate: {
+    //     delegate: walletAddress,
+    //   },
+    //   TransferFeeConfig: {
+    //     transferFeeConfigAuthority: walletAddress,
+    //     withdrawWithheldAuthority: walletAddress,
+    //     transferFeeBasisPoints: 500,
+    //     maximumFee: 2,
+    //   },
+    //   InterestBearingConfig: {
+    //     rateAuthority: walletAddress,
+    //     rate: 500,
+    //   },
+    //   DefaultAccountState: {
+    //     state: "1",
+    //   },
+    //   MintCloseAuthority: {
+    //     closeAuthority: walletAddress,
+    //   },
+    //   GroupPointer: {
+    //     authority: walletAddress,
+    //   },
+    //   TokenGroup: {
+    //     updateAuthority: walletAddress,
+    //     maxSize: 10,
+    //   },
+    //   GroupMemberPointer: {
+    //     args: {
+    //       authority: walletAddress,
+    //       memberAddress: mintAddress,
+    //     },
+    //   },
+    //   TokenGroupMember: {
+    //     args: {
+    //       memberNumber: 1,
+    //       group: address("AUFGgoM3V4L61M7XLwZPDdtgcm8dLyyDS6yKATBxhsDb"),
+    //       mint: mintAddress,
+    //     },
+    //   },
+    // };
+
+    console.log({ data });
+    const walletAddress = address(wallet.address);
+    const transaction = await createMintTransactionMessage({
+      client,
+      walletAddress,
+      mint,
+      ...data,
+    });
+    try {
+      const { signature } = await signAndSendTransaction({
+        transaction,
+        wallet,
+      });
+      setTransactionSignature(bs58.encode(signature));
+    } catch (err) {
+      console.error(err);
+    }
+  });
 
   return (
-    <form className="pt-20  min-h-screen bg-background text-foreground">
-      <div>
-        <Label htmlFor="mint-address">Mint address</Label>
-        <InputGroup>
-          <InputGroupInput
-            id="mint-address"
-            placeholder="Your mint address"
-            value={mint ? mint.address : ""}
-            disabled
-          />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton onClick={generateNewMint}>
-              {!mint && <Spinner />}
-              <RefreshCwIcon />
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
-      </div>
-
-      <div>
-        <Label htmlFor="mint-authority-address">Mint Authority address</Label>
-        <InputGroup>
-          <InputGroupInput
-            id="mint-authority-address"
-            placeholder="Enter you mint authority address"
-            value={mintAuthorityAddress === null ? "" : mintAuthorityAddress}
-            onChange={(e) => setMintAuthorityAddress(e.target.value)}
-          />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton
-              className={cn(
-                mintAuthorityAddress === wallet?.address && "bg-accent "
-              )}
-              onClick={() => setMintAuthorityAddress(wallet.address)}
-              disabled={!ready && !wallet}
-            >
-              <InputGroupText>Set to wallet address</InputGroupText>
-            </InputGroupButton>
-            <InputGroupButton onClick={() => setMintAuthorityAddress(null)}>
-              <CircleXIcon />
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
-      </div>
-
-      <div>
-        <button
-          className="p-1 border-2"
-          onClick={handleIsFreezeAuthorityToggle}
-        >
-          {isFreezeAuthority ? "On" : "Off"}
-        </button>
-        <Label htmlFor="freeze-authority-address">Freeze authority</Label>
-        <InputGroup>
-          <InputGroupInput
-            id="freeze-authority-address"
-            placeholder="Enter you freeze authority address"
-            disabled={!isFreezeAuthority}
-            value={
-              isFreezeAuthority
-                ? freezeAuthorityAddress !== null
-                  ? freezeAuthorityAddress
-                  : ""
-                : ""
-            }
-            onChange={(e) => setFreezeAuthorityAddress(e.target.value)}
-          />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton
-              className={cn(
-                freezeAuthorityAddress === wallet?.address && "bg-accent "
-              )}
-              onClick={() => setFreezeAuthorityAddress(wallet.address)}
-              disabled={!ready || !wallet || !isFreezeAuthority}
-            >
-              <InputGroupText>Set to wallet address</InputGroupText>
-            </InputGroupButton>
-            <InputGroupButton
-              disabled={!isFreezeAuthority}
-              onClick={() => setFreezeAuthorityAddress(null)}
-            >
-              <CircleXIcon />
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
-      </div>
-
-      <div>
-        <Label htmlFor="decimals">Decimals</Label>
-        <InputGroup>
-          <InputGroupInput
-            id="decimals"
-            placeholder="Enter the decimals"
-            value={typeof decimals === "number" ? decimals : ""}
-            type="number"
-            max={9}
-            min={0}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (value === "") {
-                setDecimals(null);
-              } else {
-                setDecimals(Number(value[value.length - 1]));
+    <form
+      onSubmit={onSubmit}
+      className="pt-20 font-inter max-w-2xl min-h-screen bg-background text-foreground"
+    >
+      <MintAddress
+        mintAddress={mint?.address}
+        generateNewMint={generateNewMint}
+      />
+      <BaseForm />
+      <div className="flex flex-wrap gap-2">
+        {Object.keys(allExtensions).map((extension) => (
+          <div className="flex gap-0.5 items-center">
+            <button
+              type="button"
+              onClick={() =>
+                setEnabledExtensions((prev) => ({ ...prev, [extension]: true }))
               }
-            }}
-          />
-        </InputGroup>
+            >
+              {extension}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEnabledExtensions((prev) => ({
+                  ...prev,
+                  [extension]: false,
+                }));
+              }}
+              className="bg-red-300 p-0.5"
+            >
+              x
+            </button>
+          </div>
+        ))}
       </div>
-      <div className="p-1">
-        <h2>Extensions</h2>
-        <MintCloseAuthority />
-        <PermanentDelegate />
-        <MetadataPointer />
-        <TokenMetadata />
+      <div className="p-5">
+        {Object.entries(enabledExtensions)
+          .filter(([_, value]) => value)
+          .map(([key]) => allExtensions[key as keyof typeof allExtensions])}
       </div>
       <button
-        className="border p-1 disabled:opacity-50"
-        disabled={!ready || !wallet}
-        // onClick={handleClick}
+        type="submit"
+        className={cn("border p-1 disabled:opacity-50")}
+        disabled={!ready || !wallet || mint === null}
       >
         Click to creat mint.
       </button>
-      {/* {transactionSignature} */}
     </form>
   );
 }

@@ -13,6 +13,7 @@
     "@privy-io/react-auth": "^3.10.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@solana-program/address-lookup-table": "^0.10.0",
     "@solana-program/compute-budget": "^0.11.0",
     "@solana-program/memo": "^0.10.0",
     "@solana-program/system": "^0.10.0",

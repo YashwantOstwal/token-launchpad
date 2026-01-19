@@ -1,11 +1,5 @@
 "use client";
 
-import { useSignAndSendTransaction } from "@privy-io/react-auth/solana";
-import bs58 from "bs58";
-import { SetStateAction, useCallback, useEffect, useId, useState } from "react";
-import { createClient } from "@/client";
-import { createMintTransactionMessage } from "@/lib/solana";
-import { useSolanaWallet } from "@/components/providers/solana-wallet-provider";
 import {
   InputGroup,
   InputGroupAddon,
@@ -13,58 +7,98 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@/components/ui/input-group";
-import { RefreshCwIcon, CircleXIcon } from "lucide-react";
+import { CircleXIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { useGenerateKeyPairSigner } from "@/hooks/use-generate-mint";
-import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { useInputAsAddress } from "@/hooks/use-input-as-address";
-import { useTokenCreationForm } from "./providers/token-creation-form";
-import { FormFields } from "./providers/token-creation-form";
+import {
+  useMintCreationForm,
+  type RegsiteredFields,
+} from "./providers/token-creation-form";
+import type { ErrorOption } from "react-hook-form";
+import { useEffect } from "react";
+import { InputError } from "./ui/input-error";
+import { Description } from "./ui/description";
+import { address } from "@solana/kit";
+
 function InputAsAddress({
   label,
   placeholder,
-  registrationId,
+  registrationField,
+  disabledInput,
 }: {
   label: string;
   placeholder: string;
-  registrationId: keyof FormFields;
+  registrationField: RegsiteredFields;
+  disabledInput?: boolean;
 }) {
-  const { register, setValue } = useTokenCreationForm();
+  const { register, unregister, setValue, formState, trigger } =
+    useMintCreationForm();
+
   const {
-    disabled,
+    isLoading,
     clearInput,
     isValueWalletAddress,
-    toggleIsValueWalletAddress,
-  } = useInputAsAddress((value: string) => {
-    setValue(registrationId, value);
+    setIsValueWalletAddress,
+    toggleIsValueWalletAddressAndUpdateInput,
+  } = useInputAsAddress(
+    (value) => setValue(registrationField, value),
+    () => trigger(registrationField),
+    disabledInput,
+  );
+
+  const { onChange, ...inputProps } = register(registrationField, {
+    disabled: disabledInput,
+    required: true,
   });
+
+  let error = formState.errors;
+  registrationField.split(".").forEach((eachField) => {
+    error = error?.[eachField];
+  });
+
+  useEffect(() => {
+    return () => unregister(registrationField);
+  }, []);
   return (
-    <div>
-      <Label htmlFor={registrationId}>{label}</Label>
+    <div className="mb-5">
+      <Label htmlFor={registrationField}>{label}</Label>
+      <Description>
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Ipsam numquam
+        facere, cumque impedit ad quod. Molestiae quis accusamus delectus odit!
+      </Description>
       <InputGroup>
         <InputGroupInput
-          id={registrationId}
+          id={registrationField}
           placeholder={placeholder}
-          {...register(registrationId, {
-            onChange: toggleIsValueWalletAddress,
-          })}
+          onChange={(e) => {
+            onChange(e);
+            setIsValueWalletAddress(false);
+          }}
+          {...inputProps}
         />
         <InputGroupAddon align="inline-end">
           <InputGroupButton
-            className={cn(
-              isValueWalletAddress && "bg-green-300 hover:bg-green-400"
-            )}
-            onClick={toggleIsValueWalletAddress}
-            disabled={disabled}
+            variant="ghost"
+            className={cn(isValueWalletAddress && "bg-secondary")}
+            onClick={toggleIsValueWalletAddressAndUpdateInput}
+            disabled={isLoading}
           >
-            <InputGroupText>Set to wallet address</InputGroupText>
+            <InputGroupText
+              className={cn(
+                "hover:text-accent-foreground  transition-colors",
+                isValueWalletAddress && "text-accent-foreground",
+              )}
+            >
+              Sync with wallet address
+            </InputGroupText>
           </InputGroupButton>
-          <InputGroupButton onClick={clearInput}>
+          <InputGroupButton className="transition-colors" onClick={clearInput}>
             <CircleXIcon />
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
+      <InputError error={error as undefined | ErrorOption} />
     </div>
   );
 }

@@ -1,37 +1,41 @@
+import React from "react";
 import { useSolanaWallet } from "@/components/providers/solana-wallet-provider";
-import React, {
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useId,
-  useState,
-} from "react";
 
-export function useInputAsAddress(setValue: (value: string) => void) {
-  const { ready, wallet } = useSolanaWallet();
-  const [isValueWalletAddress, setIsValueWalletAddress] = useState(true);
+export function useInputAsAddress(
+  setFieldValue: (value: string) => void,
+  triggerFieldValidation: () => void,
+  disabledInput?: boolean
+) {
+  const { wallet } = useSolanaWallet();
+  const [isValueWalletAddress, setIsValueWalletAddress] = React.useState(true);
 
-  const toggleIsValueWalletAddress = useCallback(() => {
-    const newValue = !isValueWalletAddress;
-    if (newValue) {
-      setValue(wallet.address);
-    }
-    setIsValueWalletAddress(newValue);
+  const clearInput = React.useCallback(() => {
+    setFieldValue("");
+    triggerFieldValidation();
+    setIsValueWalletAddress(false);
   }, []);
 
-  const clearInput = useCallback(() => {
-    setValue("");
+  const toggleIsValueWalletAddressAndUpdateInput = React.useCallback(() => {
+    setIsValueWalletAddress((prev) => {
+      if (!prev && wallet) {
+        setFieldValue(wallet.address);
+        triggerFieldValidation();
+      }
+      return !prev;
+    });
   }, []);
 
-  useEffect(() => {
-    if (wallet && ready) {
-      setValue(wallet.address);
+  React.useEffect(() => {
+    if (isValueWalletAddress && wallet && !disabledInput) {
+      setFieldValue(wallet.address);
+      triggerFieldValidation();
     }
-  }, [wallet, ready]);
+  }, [isValueWalletAddress, wallet, disabledInput]);
   return {
-    disabled: !ready && !wallet,
+    isLoading: !wallet,
     clearInput,
     isValueWalletAddress,
-    toggleIsValueWalletAddress,
+    setIsValueWalletAddress,
+    toggleIsValueWalletAddressAndUpdateInput,
   };
 }

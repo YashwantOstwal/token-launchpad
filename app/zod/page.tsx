@@ -1,134 +1,242 @@
 "use client";
-import { useEffect, useState } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { generateKeyPairSigner } from "@solana/kit";
-import { MintCloseAuthority } from "@/components/extensions/mint-close-authority";
 
-interface FormFields {
-  lorem: string;
-  base: {
-    mintAuthority: string;
-    freezeAuthority: string;
-  };
-}
+import { createClient } from "@/client";
+import { useSolanaWallet } from "@/components/providers/solana-wallet-provider";
+import { useState } from "react";
+import {
+  findAddressLookupTablePda,
+  getCreateLookupTableInstructionAsync,
+  getExtendLookupTableInstruction,
+  fetchAddressLookupTable,
+} from "@solana-program/address-lookup-table";
+import { getTransferSolInstruction } from "@solana-program/system";
+import {
+  Address,
+  address,
+  type AddressesByLookupTableAddress,
+  appendTransactionMessageInstructions,
+  compressTransactionMessageUsingAddressLookupTables,
+  createNoopSigner,
+  createTransactionMessage,
+  getBase64EncodedWireTransaction,
+  lamports,
+  partiallySignTransactionMessageWithSigners,
+  pipe,
+  setTransactionMessageFeePayer,
+  setTransactionMessageLifetimeUsingBlockhash,
+} from "@solana/kit";
+import {
+  useSignAndSendTransaction,
+  useSignTransaction,
+} from "@privy-io/react-auth/solana";
+import bs58 from "bs58";
 
 function Page() {
-  const [state, setState] = useState(false);
-  const [state2, setState2] = useState(false);
-  const {
-    register,
-    formState: { errors, isSubmitting },
-    setError,
-    handleSubmit,
-    unregister,
-    setValue,
-  } = useForm<FormFields>({
-    defaultValues: {
-      // basemintAuthority:''
-    },
-    mode: "onChange",
-  });
+  const [client] = useState(createClient);
+  const [altAddress, setAltAddress] = useState<null | Address>(null);
+  const { ready, wallet } = useSolanaWallet();
+  const { signAndSendTransaction } = useSignAndSendTransaction();
+  // const {signTransaction} = useSignTransaction();
+  async function handleCreateALTAccount() {
+    if (!wallet) return;
+    const [recentSlot, latestBlockhash] = await Promise.all([
+      client.rpc.getSlot().send(),
+      client.rpc.getLatestBlockhash().send(),
+    ]);
+    const walletAddress = address(wallet.address);
+    const walletSigner = createNoopSigner(walletAddress);
 
-  useEffect(() => {
-    const fn = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setValue("base.mintAuthority", "loremloremlorem"); //important to update the mint Address on
-      // reload or changing it with wallet if input value is wallet address.
+    const createLookupTableIxn = await getCreateLookupTableInstructionAsync({
+      // payer:walletSigner,
+      authority: walletSigner,
+      recentSlot,
+    });
+
+    const transactionMessage =
+      // await
+      pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayer(address(walletAddress), tx),
+        (tx) =>
+          setTransactionMessageLifetimeUsingBlockhash(
+            latestBlockhash.value,
+            tx
+          ),
+        (tx) => appendTransactionMessageInstructions([createLookupTableIxn], tx)
+        // (tx)=>compressTransactionMessageUsingAddressLookupTables(tx,)
+        // (tx) => client.estimateAndSetComputeUnitLimit(tx)
+      );
+    const partiallySignedTransactionMessage =
+      await partiallySignTransactionMessageWithSigners(transactionMessage);
+    const encodedTransaction = getBase64EncodedWireTransaction(
+      partiallySignedTransactionMessage
+    );
+
+    const { signature } = await signAndSendTransaction({
+      transaction: Buffer.from(encodedTransaction, "base64"),
+      wallet,
+    });
+
+    //poll Signature status possibly
+
+    //  const signedTransction = await signTransaction({
+    //   transaction: Buffer.from(encodedTransaction, "base64"),
+    //   wallet,
+    // });
+
+    // const sendAndConfirmTransaction =  sendAndConfirmTransactionFactory({rpc:client.rpc,rpcSubscriptions:client.rpcSubscriptions})
+
+    // await sendAndConfirmTransaction(bs58.encode(signedTransction),{commitment:'confirmed'})
+
+    const [altAddress] = await findAddressLookupTablePda({
+      authority: walletAddress,
+      recentSlot,
+    });
+    setAltAddress(altAddress);
+
+    console.log({ signature: bs58.encode(signature) });
+  }
+
+  async function fetchALTAccount(altAddress: Address) {
+    const altAccount = await client.rpc
+      .getAccountInfo(altAddress, {
+        encoding: "jsonParsed",
+        commitment: "confirmed",
+      })
+      .send();
+
+    console.log({ altAddress, altAccount });
+  }
+
+  async function extendALTAccount(altAddress: Address) {
+    if (!wallet) return;
+    const walletAddress = address(wallet.address);
+    const walletSigner = createNoopSigner(walletAddress);
+
+    const { value: latestBlockhash } = await client.rpc
+      .getLatestBlockhash()
+      .send();
+
+    const extendALTAccountIxn = getExtendLookupTableInstruction({
+      authority: walletSigner,
+      payer: walletSigner,
+      address: altAddress,
+      addresses: [
+        walletAddress,
+        address("Es5XNFKXRRyPue823jhp4StroXCvCZT1AMB51A8CCGNK"),
+        address("5jnqhUeu3grcXZB4MZReCxUoMxpdRCBGHStyPop1h1dc"),
+        address("8HkVeZsusfgrzPfTSRRv29wjdg89CCZ6sMhwDxQBjkD3"),
+      ],
+    });
+
+    const transactionMessage =
+      // await
+      pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayer(address(walletAddress), tx),
+        (tx) =>
+          setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+        (tx) => appendTransactionMessageInstructions([extendALTAccountIxn], tx)
+        // (tx) => client.estimateAndSetComputeUnitLimit(tx)
+      );
+    const partiallySignedTransactionMessage =
+      await partiallySignTransactionMessageWithSigners(transactionMessage);
+    const encodedTransaction = getBase64EncodedWireTransaction(
+      partiallySignedTransactionMessage
+    );
+
+    const { signature } = await signAndSendTransaction({
+      transaction: Buffer.from(encodedTransaction, "base64"),
+      wallet,
+    });
+    console.log({ signature: bs58.encode(signature) });
+  }
+
+  async function signAndSendTransactionV0WithALT(altAddress: Address) {
+    const walletAddress = address(wallet.address);
+    const walletSigner = createNoopSigner(walletAddress);
+    const transferSolIxn = getTransferSolInstruction({
+      source: walletSigner,
+      destination: address("5jnqhUeu3grcXZB4MZReCxUoMxpdRCBGHStyPop1h1dc"),
+      amount: lamports(BigInt(100000)),
+    });
+
+    const { value: latestBlockhash } = await client.rpc
+      .getLatestBlockhash()
+      .send();
+    const {
+      data: { addresses },
+    } = await fetchAddressLookupTable(client.rpc, altAddress);
+    const addressesByAddressLookupTable: AddressesByLookupTableAddress = {
+      [altAddress]: addresses,
     };
-    fn();
-  }, []);
 
-  const onSubmit = handleSubmit((data) => {
-    console.log(data);
-  });
+    const transactionMessage =
+      // await
+      pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayer(address(walletAddress), tx),
+        (tx) =>
+          setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+        (tx) => appendTransactionMessageInstructions([transferSolIxn], tx),
+        (tx) =>
+          compressTransactionMessageUsingAddressLookupTables(
+            tx,
+            addressesByAddressLookupTable
+          )
+      );
+    const partiallySignedTransactionMessage =
+      await partiallySignTransactionMessageWithSigners(transactionMessage);
+    const encodedTransaction = getBase64EncodedWireTransaction(
+      partiallySignedTransactionMessage
+    );
+
+    const { signature } = await signAndSendTransaction({
+      transaction: Buffer.from(encodedTransaction, "base64"),
+      wallet,
+    });
+    console.log({ signature: bs58.encode(signature) });
+  }
   return (
-    <>
-      <form
-        onSubmit={onSubmit}
-        className="h-screen bg-red-100 flex flex-col items-center justify-center"
-      >
-        <div className="p-5">
-          <input
-            {...register("base.mintAuthority", {
-              required: "Required field",
-              validate: (value: string) => {
-                if (value.length < 8) {
-                  return "It must be a valid address";
-                }
-                return true;
-              },
-              disabled: state,
-            })}
-            type="text"
-            className="p-1 border border-black"
-          />
-          {errors.base?.mintAuthority && (
-            <p className="text-red-400">{errors.base?.mintAuthority.message}</p>
-          )}
-        </div>
-        <div className="p-5">
-          <input
-            {...register("base.freezeAuthority", {
-              validate: (value) => {
-                if (value.length > 3) {
-                  return true;
-                } else {
-                  return "must be greater than 3";
-                }
-              },
-              disabled: state,
-            })}
-            type="string"
-            className="p-1 border border-black"
-          />
-          {!state && errors.base?.freezeAuthority && (
-            <p className="text-red-400">
-              {errors.base.freezeAuthority.message}
-            </p>
-          )}
-
-          {state2 && (
-            <>
-              <input
-                {...register("lorem", {
-                  validate: (value) => {
-                    if (value.length > 3) {
-                      return true;
-                    } else {
-                      return "must be greater than 3";
-                    }
-                  },
-                  disabled: state,
-                })}
-                type="string"
-                className="p-1 border border-black"
-              />
-              {!state && errors.lorem && (
-                <p className="text-red-400">{errors.lorem.message}</p>
-              )}
-            </>
-          )}
-        </div>
-        <button
-          disabled={isSubmitting}
-          className="disabled:bg-red-400"
-          type="submit"
-        >
-          Click to submit
-        </button>
-        {errors.root && errors.root.message}
-      </form>
-      <button onClick={() => setState((prev) => !prev)}>Click to toggle</button>
+    <div className="bg-red-100 flex flex-col items-center justify-center h-screen">
       <button
+        disabled={!ready}
+        onClick={handleCreateALTAccount}
+        className="p-2 border"
+      >
+        Click to create ALT
+      </button>
+      <button
+        disabled={!altAddress}
+        className="p-2 border"
         onClick={() => {
-          unregister("lorem"); //to be unregistered
-          setState2((prev) => !prev);
+          if (!altAddress) return;
+          fetchALTAccount(altAddress);
         }}
       >
-        Click to toggle
+        Fetch newly created ALT account
       </button>
-    </>
+      <button
+        disabled={!altAddress}
+        className="p-2 border"
+        onClick={() => {
+          if (!altAddress) return;
+          extendALTAccount(altAddress);
+        }}
+      >
+        extend the newly created ALT account
+      </button>
+      <button
+        disabled={!altAddress}
+        className="p-2 border"
+        onClick={() => {
+          if (!altAddress) return;
+          signAndSendTransactionV0WithALT(altAddress);
+        }}
+      >
+        signAndSendTransactionV0WithALT
+      </button>
+    </div>
   );
 }
 

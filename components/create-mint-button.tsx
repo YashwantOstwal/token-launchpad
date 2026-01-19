@@ -4,14 +4,24 @@ import { useState } from "react";
 import { useSolanaWallet } from "./providers/solana-wallet-provider";
 import { createClient } from "@/client";
 import { useSignAndSendTransaction } from "@privy-io/react-auth/solana";
+import { cn } from "@/lib/utils";
+import { useMintCreationForm } from "./providers/token-creation-form";
+import { type KeyPairSigner } from "@solana/kit";
 
-function CreateMintButton() {
-  const { ready, wallet } = useSolanaWallet();
-  const [client] = useState(createClient);
-  const { signAndSendTransaction } = useSignAndSendTransaction();
-  const [transactionSignature, setTransactionSignature] = useState<
-    string | null
-  >(null);
+function CreateMintButton({
+  mint,
+  className,
+  ...props
+}: React.ComponentProps<"button"> & {
+  mint: KeyPairSigner<string> | null;
+}) {
+  const { wallet, ready } = useSolanaWallet();
+  const { handleSubmit } = useMintCreationForm();
+  // const [client] = useState(createClient);
+  // const { signAndSendTransaction } = useSignAndSendTransaction();
+  // const [transactionSignature, setTransactionSignature] = useState<
+  //   string | null
+  // >(null)
 
   // async function handleClick() {
   //   const walletAddress = address(wallet.address);
@@ -50,9 +60,10 @@ function CreateMintButton() {
 
   return (
     <button
-      className="border p-1 disabled:opacity-50"
-      disabled={!ready || !wallet}
-      // onClick={handleClick}
+      type="submit"
+      className={cn("border p-1 disabled:opacity-50", className)}
+      disabled={!ready || !wallet || mint === null}
+      {...props}
     >
       Click to creat mint.
     </button>
