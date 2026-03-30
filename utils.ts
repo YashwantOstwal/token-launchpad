@@ -1,9 +1,3 @@
-import { FieldError } from "react-hook-form";
-import {
-  FormFields,
-  RegsiteredFields,
-} from "./components/providers/token-creation-form";
-
 export function truncateAddress(address: string, n: number = 4) {
   return address.slice(0, n) + "..." + address.slice(address.length - n);
 }

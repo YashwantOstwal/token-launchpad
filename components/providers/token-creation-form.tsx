@@ -12,15 +12,17 @@ const address = z
     message: "must be a valid account address",
   });
 
-const requiredString = z.string().min(1, {
-  message: "Required field",
-});
-const schema = z.object({
+const requiredString = z
+  .string({
+    error: "Length should atleast be 1",
+  })
+  .min(1);
+const formSchema = z.object({
   // base: z.object({
   mintAuthority: address,
   freezeAuthority: z
     .string()
-    .optional()
+    // .optional()
     .refine((value) => value && isAddress(value) && !isOffCurveAddress(value), {
       message: "must be a valid account address",
     }),
@@ -28,22 +30,22 @@ const schema = z.object({
   // }),
   extensions: z
     .object({
-      mintCloseAuthority: z
+      MintCloseAuthority: z
         .object({
           closeAuthority: address,
         })
         .optional(),
-      permanentDelegate: z
+      PermanentDelegate: z
         .object({
           delegate: address,
         })
         .optional(),
-      metadataPointer: z
+      MetadataPointer: z
         .object({
           authority: address,
         })
         .optional(),
-      tokenMetadata: z
+      TokenMetadata: z
         .object({
           symbol: requiredString,
           name: requiredString,
@@ -51,7 +53,7 @@ const schema = z.object({
           uri: requiredString.url(),
         })
         .optional(),
-      transferFeeConfig: z
+      TransferFeeConfig: z
         .object({
           maximumFee: z.number().min(0),
           withdrawWithheldAuthority: address,
@@ -59,66 +61,53 @@ const schema = z.object({
           transferFeeBasisPoints: z.number().min(0),
         })
         .optional(),
-      interestBearingTokens: z
+      InterestBearingConfig: z
         .object({
           rateAuthority: address,
           rate: z.number().min(0),
         })
         .optional(),
-      defaultAccountState: z
+      DefaultAccountState: z
         .object({
           state: z.enum(["1", "2"]),
         })
         .optional(),
 
-      nonTransferable: z.object({}).optional(),
-      cpiGuard: z
+      NonTransferable: z.object({}).optional(),
+      CpiGuard: z
         .object({
           lock: z.boolean(),
         })
         .optional(),
 
-      tokenGroup: z
+      TokenGroup: z
         .object({
           maxSize: z.number().min(0),
           updateAuthority: address,
         })
         .optional(),
-      groupPointer: z
+      GroupPointer: z
         .object({
           authority: address,
+        })
+        .optional(),
+      GroupMemberPointer: z
+        .object({
+          authority: address,
+        })
+        .optional(),
+      TokenGroupMember: z
+        .object({
+          group: address,
         })
         .optional(),
     })
     .optional(),
 });
 
-export type FormFields = z.infer<typeof schema>;
+export type FormFields = z.infer<typeof formSchema>;
 
-type AllFieldPaths = FieldPath<FormFields>;
-export type RegsiteredFields =
-  | "mintAuthority"
-  | "freezeAuthority"
-  | "decimals"
-  | "extensions.mintCloseAuthority.closeAuthority"
-  | "extensions.permanentDelegate.delegate"
-  | "extensions.metadataPointer.authority"
-  | "extensions.tokenMetadata.symbol"
-  | "extensions.tokenMetadata.name"
-  | "extensions.tokenMetadata.updateAuthority"
-  | "extensions.tokenMetadata.uri"
-  | "extensions.transferFeeConfig.maximumFee"
-  | "extensions.transferFeeConfig.withdrawWithheldAuthority"
-  | "extensions.transferFeeConfig.transferFeeConfigAuthority"
-  | "extensions.transferFeeConfig.transferFeeBasisPoints"
-  | "extensions.interestBearingTokens.rateAuthority"
-  | "extensions.interestBearingTokens.rate"
-  | "extensions.defaultAccountState.state"
-  | "extensions.cpiGuard.lock"
-  | "extensions.nonTransferable"
-  | "extensions.tokenGroup.updateAuthority"
-  | "extensions.tokenGroup.maxSize"
-  | "extensions.groupPointer.authority";
+export type AllFieldPaths = FieldPath<FormFields>;
 
 const TokenCreationFormContext = React.createContext<ReturnType<
   typeof useForm<FormFields>
@@ -131,8 +120,8 @@ function TokenCreationFormProvider({
 }) {
   const form = useForm<FormFields>({
     mode: "onChange",
-    resolver: zodResolver(schema),
-    //dont use default values for conditional fields.
+    resolver: zodResolver(formSchema),
+    //dont use default values for conditional fields --> it is causing unpredictable behaviour.
   });
 
   const formState = useFormState({ control: form.control });

@@ -1,17 +1,19 @@
 import { generateKeyPairSigner, type KeyPairSigner } from "@solana/kit";
-import { useEffect, useState } from "react";
+import { run } from "@/utils";
+import { useEffect, useState, useCallback } from "react";
 
 export function useGenerateKeyPairSigner() {
   const [keyPair, setKeyPairSigner] = useState<KeyPairSigner<string> | null>(
-    null
+    null,
   );
 
-  async function generateNewKeyPair() {
+  const generateNewKeyPair = useCallback(async () => {
     const newKeyPair = await generateKeyPairSigner();
     setKeyPairSigner(newKeyPair);
-  }
+  }, []);
+
   useEffect(() => {
-    generateNewKeyPair();
+    run(generateNewKeyPair);
   }, []);
   return [keyPair, generateNewKeyPair] as const;
 }

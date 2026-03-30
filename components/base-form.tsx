@@ -7,11 +7,11 @@ import { InputWithLabel } from "./input-with-label";
 
 function BaseForm() {
   return (
-    <div>
+    <>
       <MintAuthorityField />
       <FreezeAuthorityField />
       <DecimalsField />
-    </div>
+    </>
   );
 }
 
@@ -27,26 +27,13 @@ function DecimalsField() {
   );
 }
 function FreezeAuthorityField() {
-  const [hasFreezeAuthority, setHasFreezeAuthority] =
-    React.useState<boolean>(true);
   return (
-    <div>
-      <button
-        type="button"
-        className="p-1 border-2"
-        onClick={() => {
-          setHasFreezeAuthority(toggle);
-        }}
-      >
-        {hasFreezeAuthority ? "On" : "Off"}
-      </button>
-      <InputAsAddress
-        label="Freeze Authority Address"
-        placeholder="Enter your Freeze Authority Address"
-        registrationField="freezeAuthority"
-        disabledInput={!hasFreezeAuthority}
-      />
-    </div>
+    <InputAsAddress
+      label="Freeze Authority Address"
+      placeholder="Enter your Freeze Authority Address"
+      registrationField="freezeAuthority"
+      // optional
+    />
   );
 }
 function MintAuthorityField() {

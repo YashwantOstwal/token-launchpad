@@ -10,17 +10,18 @@ import { CircleXIcon, RefreshCwIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  type RegsiteredFields,
+  AllFieldPaths,
   useMintCreationForm,
 } from "./providers/token-creation-form";
 import { InputError } from "./ui/input-error";
 import { ErrorOption } from "react-hook-form";
 import { useEffect } from "react";
 import { Description } from "./ui/description";
+import { Field, FieldDescription, FieldError, FieldLabel } from "./ui/field";
 
 type InputWithLabelProps = React.ComponentProps<typeof InputGroupInput> & {
   label: string;
-  registrationField: RegsiteredFields;
+  registrationField: AllFieldPaths;
 } & (
     | {
         type?: "text";
@@ -52,6 +53,8 @@ function InputWithLabel({
 
   let error = formState.errors;
   registrationField.split(".").forEach((eachField) => {
+    //@ts-expect-error
+
     error = error?.[eachField];
   });
 
@@ -59,32 +62,34 @@ function InputWithLabel({
     return () => unregister(registrationField);
   }, []);
   return (
-    <div className="mb-">
-      <Label htmlFor={registrationField}>{label}</Label>
-      <Description>
+    <Field>
+      <FieldLabel htmlFor={registrationField}>{label}</FieldLabel>
+      <FieldDescription>
         Lorem ipsum dolor sit amet consectetur adipisicing elit. Ipsam numquam
         facere, cumque impedit ad quod. Molestiae quis accusamus delectus odit!
-      </Description>
-      <InputGroup>
-        <InputGroupInput
-          id={registrationField}
-          type={type}
-          {...props}
-          {...register(registrationField, {
-            valueAsNumber: type === "text" ? false : true,
-            value: defaultValue,
-          })}
-        />
-        {type === "text" && (
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton onClick={clearInput}>
-              <CircleXIcon />
-            </InputGroupButton>
-          </InputGroupAddon>
-        )}
-      </InputGroup>
-      <InputError error={error as undefined | ErrorOption} />
-    </div>
+      </FieldDescription>
+      <div>
+        <InputGroup>
+          <InputGroupInput
+            id={registrationField}
+            type={type}
+            {...props}
+            {...register(registrationField, {
+              valueAsNumber: type === "text" ? false : true,
+              value: defaultValue,
+            })}
+          />
+          {type === "text" && (
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton onClick={clearInput}>
+                <CircleXIcon />
+              </InputGroupButton>
+            </InputGroupAddon>
+          )}
+        </InputGroup>
+        <InputError error={error as undefined | ErrorOption} />
+      </div>
+    </Field>
   );
 }
 

@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
-import { SolanaConnectionProvider } from "@/components/providers/solana-connection-provider";
-import { SolanaWalletProvider } from "@/components/providers/solana-wallet-provider";
 import { Navbar } from "@/components/navbar";
 import { TokenCreationFormProvider } from "@/components/providers/token-creation-form";
-const geistSans = Inter({
-  variable: "--font-inter-sans",
+import { SolanaClientProvider } from "@/components/providers/solana-client";
+import {
+  PrivyConfigProvider,
+  PrivyAsSolanaWalletProvider,
+} from "@/components/providers/privy-as-solana-wallet";
+
+const poppinsSans = Poppins({
+  variable: "--font-poppins-sans",
   subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
 const geistMono = Geist_Mono({
@@ -27,17 +32,26 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          async
+          crossOrigin="anonymous"
+          src="https://tweakcn.com/live-preview.min.js"
+        />
+      </head>
       <body
-        className={`${geistSans.className}  ${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${poppinsSans.className}  ${geistMono.variable} antialiased`}
       >
-        <SolanaConnectionProvider>
-          <SolanaWalletProvider>
-            <TokenCreationFormProvider>
-              <Navbar />
-              {children}
-            </TokenCreationFormProvider>
-          </SolanaWalletProvider>
-        </SolanaConnectionProvider>
+        <SolanaClientProvider>
+          <PrivyConfigProvider appId="cmjuf6ftn021ml50cszzykcsu">
+            <PrivyAsSolanaWalletProvider>
+              <TokenCreationFormProvider>
+                <Navbar />
+                {children}
+              </TokenCreationFormProvider>
+            </PrivyAsSolanaWalletProvider>
+          </PrivyConfigProvider>
+        </SolanaClientProvider>
       </body>
     </html>
   );

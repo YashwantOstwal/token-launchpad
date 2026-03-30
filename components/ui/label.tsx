@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
+import { Label as LabelPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,6 @@ function Label({
       data-slot="label"
       className={cn(
         "flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-        "tracking-[-0.2px] leading-5.5 text-[15px] font-semibold mb-px",
         className,
       )}
       {...props}
@@ -23,3 +22,5 @@ function Label({
 }
 
 export { Label };
+
+// "tracking-[-0.2px] leading-5.5 text-[15px] font-semibold mb-px",

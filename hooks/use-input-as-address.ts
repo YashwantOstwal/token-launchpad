@@ -1,12 +1,12 @@
+import { usePrivyAsSolanaWallet } from "@/components/providers/privy-as-solana-wallet";
 import React from "react";
-import { useSolanaWallet } from "@/components/providers/solana-wallet-provider";
 
 export function useInputAsAddress(
   setFieldValue: (value: string) => void,
   triggerFieldValidation: () => void,
-  disabledInput?: boolean
+  disabledInput?: boolean,
 ) {
-  const { wallet } = useSolanaWallet();
+  const { selectedWallet } = usePrivyAsSolanaWallet();
   const [isValueWalletAddress, setIsValueWalletAddress] = React.useState(true);
 
   const clearInput = React.useCallback(() => {
@@ -17,8 +17,8 @@ export function useInputAsAddress(
 
   const toggleIsValueWalletAddressAndUpdateInput = React.useCallback(() => {
     setIsValueWalletAddress((prev) => {
-      if (!prev && wallet) {
-        setFieldValue(wallet.address);
+      if (!prev && selectedWallet) {
+        setFieldValue(selectedWallet.address);
         triggerFieldValidation();
       }
       return !prev;
@@ -26,13 +26,13 @@ export function useInputAsAddress(
   }, []);
 
   React.useEffect(() => {
-    if (isValueWalletAddress && wallet && !disabledInput) {
-      setFieldValue(wallet.address);
+    if (isValueWalletAddress && selectedWallet && !disabledInput) {
+      setFieldValue(selectedWallet.address);
       triggerFieldValidation();
     }
-  }, [isValueWalletAddress, wallet, disabledInput]);
+  }, [isValueWalletAddress, selectedWallet, disabledInput]);
   return {
-    isLoading: !wallet,
+    isLoading: !selectedWallet,
     clearInput,
     isValueWalletAddress,
     setIsValueWalletAddress,

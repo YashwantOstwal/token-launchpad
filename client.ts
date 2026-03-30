@@ -1,43 +1,23 @@
 import {
-  appendTransactionMessageInstruction,
-  type BaseTransactionMessage,
-  type TransactionMessageWithFeePayer,
+  airdropFactory,
+  createSolanaRpc,
+  createSolanaRpcSubscriptions,
 } from "@solana/kit";
-import {
-  estimateComputeUnitLimitFactory,
-  getSetComputeUnitLimitInstruction,
-} from "@solana-program/compute-budget";
-import { connection, type Connection } from "./connection";
 
-interface Client extends Connection {
-  estimateAndSetComputeUnitLimit: ReturnType<
-    typeof estimateAndSetComputeUnitLimitFactory
-  >;
+export interface Client {
+  rpc: ReturnType<typeof createSolanaRpc>;
+  rpcSubscriptions: ReturnType<typeof createSolanaRpcSubscriptions>;
+  airdrop: ReturnType<typeof airdropFactory>;
 }
-
-function estimateAndSetComputeUnitLimitFactory(
-  ...inputs: Parameters<typeof estimateComputeUnitLimitFactory>
-) {
-  const estimateComputeUnitLimit = estimateComputeUnitLimitFactory(...inputs);
-  return async <
-    T extends BaseTransactionMessage & TransactionMessageWithFeePayer
-  >(
-    transactionMessage: T
-  ) => {
-    const units = await estimateComputeUnitLimit(transactionMessage);
-    return appendTransactionMessageInstruction(
-      getSetComputeUnitLimitInstruction({ units }),
-      transactionMessage
+let client: Client | undefined;
+export function createClient(): Client {
+  if (!client) {
+    const rpc = createSolanaRpc("https://api.devnet.solana.com");
+    const rpcSubscriptions = createSolanaRpcSubscriptions(
+      "wss://api.devnet.solana.com",
     );
-  };
+    const airdrop = airdropFactory({ rpc, rpcSubscriptions });
+    client = { rpc, rpcSubscriptions, airdrop };
+  }
+  return client;
 }
-function createClient() {
-  return {
-    ...connection,
-    estimateAndSetComputeUnitLimit: estimateAndSetComputeUnitLimitFactory({
-      rpc: connection.rpc,
-    }),
-  };
-}
-
-export { createClient, type Client };

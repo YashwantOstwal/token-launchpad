@@ -1,10 +1,10 @@
 import { InputAsAddress } from "../input-as-address";
 import { FieldSet, FieldLegend, FieldDescription } from "../ui/field";
 
-function GroupPointer() {
+function GroupMemberPointer() {
   return (
     <FieldSet>
-      <FieldLegend>Group pointer</FieldLegend>
+      <FieldLegend>Group member pointer</FieldLegend>
       <FieldDescription>
         Lorem ipsum dolor sit amet, consectetur adipisicing elit. Harum,
         possimus.
@@ -12,10 +12,10 @@ function GroupPointer() {
       <InputAsAddress
         placeholder="Enter Group Pointer Authority Address..."
         label="Group Pointer Authority Address"
-        registrationField="extensions.GroupPointer.authority"
+        registrationField="extensions.GroupMemberPointer.authority"
       />
     </FieldSet>
   );
 }
 
-export { GroupPointer };
+export { GroupMemberPointer };
