@@ -9,7 +9,7 @@ import {
 function PermanentDelegate() {
   return (
     <FieldSet>
-      <FieldLegend>Metadata pointer</FieldLegend>
+      <FieldLegend>Permanent delegate</FieldLegend>
       <FieldDescription>
         Lorem ipsum dolor, sit amet consectetur adipisicing elit. Ex,
         perferendis.

@@ -11,7 +11,7 @@ import {
 function TokenGroup() {
   return (
     <FieldSet>
-      <FieldLegend>Metadata pointer</FieldLegend>
+      <FieldLegend>Token group</FieldLegend>
       <FieldDescription>
         Lorem ipsum dolor, sit amet consectetur adipisicing elit. Ex,
         perferendis.

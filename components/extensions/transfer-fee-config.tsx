@@ -10,7 +10,7 @@ import {
 function TransferFeeConfig() {
   return (
     <FieldSet>
-      <FieldLegend>Metadata pointer</FieldLegend>
+      <FieldLegend>Transfer fee config</FieldLegend>
       <FieldDescription>
         Lorem ipsum dolor, sit amet consectetur adipisicing elit. Ex,
         perferendis.

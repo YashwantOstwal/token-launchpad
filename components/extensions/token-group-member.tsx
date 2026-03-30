@@ -4,7 +4,7 @@ import { FieldSet, FieldLegend, FieldDescription } from "../ui/field";
 function TokenGroupMember() {
   return (
     <FieldSet>
-      <FieldLegend>Group pointer</FieldLegend>
+      <FieldLegend>Token group member</FieldLegend>
       <FieldDescription>
         Lorem ipsum dolor sit amet, consectetur adipisicing elit. Harum,
         possimus.
