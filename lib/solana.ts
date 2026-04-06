@@ -1,4 +1,7 @@
-import { getCreateAccountInstruction } from "@solana-program/system";
+import {
+  getCreateAccountInstruction,
+  SYSTEM_PROGRAM_ADDRESS,
+} from "@solana-program/system";
 import {
   address,
   pipe,
@@ -14,6 +17,7 @@ import {
   Instruction,
   getTransactionCodec,
   setTransactionMessageFeePayerSigner,
+  generateKeyPairSigner,
 } from "@solana/kit";
 import {
   extension,
@@ -49,64 +53,6 @@ type CreateMintTransactionMessage = {
   freezeAuthority?: string;
   extensions?: FormFields["extensions"];
 };
-
-type TokenMetadataExtension = {
-  updateAuthority: string;
-  name: string;
-  symbol: string;
-  uri: string;
-};
-
-type NonTransferableMintExtension = {};
-type MetadataPointerExtension = {
-  authority: string;
-};
-type PermanentDelegateExtension = {
-  delegate: string;
-};
-
-type TransferFeeConfigExtension = {
-  withdrawWithheldAuthority: string;
-  transferFeeConfigAuthority: string;
-  maximumFee: number | bigint;
-  transferFeeBasisPoints: number;
-};
-
-type InterestBearingConfigExtension = {
-  rateAuthority: Address;
-  rate: number;
-};
-interface DefaultAccountStateExtension {
-  //"1"-> intialised
-  // "2" -> Frozen
-  state: "1" | "2";
-}
-
-interface MintCloseAuthorityExtension {
-  closeAuthority: string;
-}
-
-interface GroupPointerExtension {
-  authority: string;
-}
-interface TokenGroupExtension {
-  updateAuthority: Address;
-  maxSize: number;
-}
-
-interface TokenGroupMemberExtension {
-  args: {
-    mint: Address;
-    group: Address;
-    memberNumber: number;
-  };
-}
-interface GroupMemberPointerExtension {
-  args: {
-    authority: Address;
-    memberAddress: Address;
-  };
-}
 
 const createMintTransactionMessage = async ({
   client,
@@ -161,8 +107,12 @@ const createMintTransactionMessage = async ({
       const initializeTransferFeeConfigExtensionIxn =
         getInitializeTransferFeeConfigInstruction({
           mint: mintAddress,
-          transferFeeConfigAuthority: address(transferFeeConfigAuthority),
-          withdrawWithheldAuthority: address(withdrawWithheldAuthority),
+          transferFeeConfigAuthority: transferFeeConfigAuthority
+            ? (transferFeeConfigAuthority as Address)
+            : null,
+          withdrawWithheldAuthority: withdrawWithheldAuthority
+            ? (withdrawWithheldAuthority as Address)
+            : null,
           ...rest,
         });
 
@@ -292,7 +242,7 @@ const createMintTransactionMessage = async ({
       }
 
       if (extensions["TransferFeeConfig"]) {
-        const { maximumFee, transferFeeBasisPoints, ...authorities } =
+        const { maximumFee, transferFeeBasisPoints } =
           extensions["TransferFeeConfig"];
 
         const transferFees: TransferFeeArgs = {
@@ -300,13 +250,10 @@ const createMintTransactionMessage = async ({
           maximumFee,
           transferFeeBasisPoints,
         };
+
         const transferFeeConfigExtension = extension("TransferFeeConfig", {
-          withdrawWithheldAuthority: address(
-            authorities.withdrawWithheldAuthority,
-          ),
-          transferFeeConfigAuthority: address(
-            authorities.transferFeeConfigAuthority,
-          ),
+          withdrawWithheldAuthority: SYSTEM_PROGRAM_ADDRESS,
+          transferFeeConfigAuthority: SYSTEM_PROGRAM_ADDRESS, // it works because this object is just used to compute the space and corresponding rent.
           withheldAmount: BigInt(0),
           newerTransferFee: transferFees,
           olderTransferFee: transferFees,

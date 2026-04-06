@@ -53,18 +53,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { GroupMemberPointer } from "@/components/extensions/group-member-pointer";
 import { TokenGroupMember } from "@/components/extensions/token-group-member";
 import { Badge } from "@/components/ui/badge";
-/* 
-Todo:
-creating a mint with them.
-save draft in local storage.
-update the url params with inputs updating it on mount logic.
-
-maximum fee validation with .superRefine();
-disclaimer: tokenMetadata, groupMint, memberMint extension requires signing from mintAuthority, so recommned you to set this field to the walletAddress so you can sign the transaction.
-
-disclaimer: Default state extension requires Freeze Authority, Mandatory if you want to 
-enable default state extension.
-*/
+import { toast } from "sonner";
+import { SolanaExplorer } from "@/icons";
 export default function Home() {
   const client = useSolanaClient();
   const [allExtensions] = useState({
@@ -74,7 +64,7 @@ export default function Home() {
     interestBearingTokens: <InterestBearingTokens />,
     metadataPointer: <MetadataPointer />,
     nonTransferable: <NonTransferable />,
-    PermanentDelegate: <PermanentDelegate />,
+    permanentDelegate: <PermanentDelegate />,
     tokenGroup: <TokenGroup />,
     tokenMetadata: <TokenMetadata />,
     transferFeeConfig: <TransferFeeConfig />,
@@ -95,7 +85,7 @@ export default function Home() {
     interestBearingTokens: false,
     metadataPointer: false,
     nonTransferable: false,
-    PermanentDelegate: false,
+    permanentDelegate: false,
     tokenGroup: false,
     tokenMetadata: false,
     transferFeeConfig: false,
@@ -116,17 +106,38 @@ export default function Home() {
       ...data,
     });
 
-    try {
-      const { signature } = await signAndSendTransaction({
+    toast.promise(
+      signAndSendTransaction({
         transaction,
         wallet: selectedWallet,
-      });
-      console.log(getBase58Decoder().decode(signature));
-      console.log(mint.address);
-      // await generateNewMint();
-    } catch (err) {
-      console.log(err);
-    }
+        options: { commitment: "confirmed" },
+      }),
+      {
+        loading: "Pending...",
+        success: async () => {
+          await generateNewMint();
+          return (
+            <a
+              target="_blank"
+              rel="noopener noreferrer"
+              className=""
+              href={`https://explorer.solana.com/address/${mint.address}/token-extensions?cluster=devnet`}
+            >
+              <div className="flex items-center gap-1 text-nowrap">
+                Mint created!. View on
+                <SolanaExplorer className="w-30" />
+              </div>
+            </a>
+          );
+        },
+        error: (err) => {
+          console.error(err);
+          if (err?.message?.includes("rejected"))
+            return "Transaction rejected.";
+          return "Transaction failed to execute. Check the logs.";
+        },
+      },
+    );
   });
 
   return (
@@ -151,7 +162,7 @@ export default function Home() {
                   <InputGroupInput
                     id="mint-address"
                     placeholder="Your mint address"
-                    value={mint?.address}
+                    value={mint ? mint.address : ""}
                     disabled
                   />
                   <InputGroupAddon align="inline-end">
@@ -238,6 +249,19 @@ function Hero() {
         launchpad
       </h1>
       <RadioGroup
+        defaultValue="devnet"
+        className="text-foreground flex items-center mb-5 "
+      >
+        <Field orientation="horizontal" className="opacity-60 w-fit">
+          <RadioGroupItem value="mainnet" id="mainnet" disabled />
+          <FieldLabel htmlFor="mainnet">Mainnet</FieldLabel>
+        </Field>
+        <Field orientation="horizontal" className="w-fit">
+          <RadioGroupItem value="devnet" id="devnet" />
+          <FieldLabel htmlFor="devnet">Devnet</FieldLabel>
+        </Field>
+      </RadioGroup>
+      <RadioGroup
         defaultValue="token-2022"
         className="text-foreground flex items-center mb-5 "
       >
@@ -247,7 +271,7 @@ function Hero() {
         </Field>
         <Field orientation="horizontal" className="w-fit">
           <RadioGroupItem value="token-2022" id="token-2022" />
-          <FieldLabel htmlFor="token-2022">Token 2022 program</FieldLabel>
+          <FieldLabel htmlFor="token-2022">Token-2022 program</FieldLabel>
         </Field>
       </RadioGroup>
     </div>

@@ -49,8 +49,8 @@ const formSchema = z.object({
       TransferFeeConfig: z
         .object({
           maximumFee: z.number().min(0),
-          withdrawWithheldAuthority: address,
-          transferFeeConfigAuthority: address,
+          withdrawWithheldAuthority: address.optional(),
+          transferFeeConfigAuthority: address.optional(),
           transferFeeBasisPoints: z.number().min(0),
         })
         .optional(),

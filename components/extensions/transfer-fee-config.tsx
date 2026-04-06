@@ -16,6 +16,18 @@ function TransferFeeConfig() {
         perferendis.
       </FieldDescription>
       <FieldGroup>
+        <InputAsAddress
+          placeholder="Enter Tranfer fee config Authority Address..."
+          label="Tranfer fee config Authority Address"
+          registrationField="extensions.TransferFeeConfig.transferFeeConfigAuthority"
+          optional
+        />
+        <InputAsAddress
+          placeholder="Enter Withdraw Withheld Authority Address..."
+          label="Withdraw Withheld Authority Address"
+          registrationField="extensions.TransferFeeConfig.withdrawWithheldAuthority"
+          optional
+        />
         <InputWithLabel
           registrationField="extensions.TransferFeeConfig.transferFeeBasisPoints"
           label="Transfer fees in BPs (100BPs = 1%)"
@@ -29,17 +41,6 @@ function TransferFeeConfig() {
           type="number"
           placeholder={`1000000000 (Maximum fee of 1 token if "Decimals" is "9")`}
           defaultValue={1000000000}
-        />
-
-        <InputAsAddress
-          placeholder="Enter Tranfer fee config Authority Address..."
-          label="Tranfer fee config Authority Address"
-          registrationField="extensions.TransferFeeConfig.transferFeeConfigAuthority"
-        />
-        <InputAsAddress
-          placeholder="Enter Withdraw Withheld Authority Address..."
-          label="Withdraw Withheld Authority Address"
-          registrationField="extensions.TransferFeeConfig.withdrawWithheldAuthority"
         />
       </FieldGroup>
     </FieldSet>

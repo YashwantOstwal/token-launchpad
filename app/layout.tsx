@@ -9,6 +9,7 @@ import {
   PrivyAsSolanaWalletProvider,
 } from "@/components/providers/privy-as-solana-wallet";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 
 const poppinsSans = Poppins({
   variable: "--font-poppins-sans",
@@ -33,13 +34,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <script
-          async
-          crossOrigin="anonymous"
-          src="https://tweakcn.com/live-preview.min.js"
-        />
-      </head>
       <body
         className={`${poppinsSans.className}  ${geistMono.variable} antialiased`}
       >
@@ -55,6 +49,7 @@ export default function RootLayout({
             </PrivyAsSolanaWalletProvider>
           </PrivyConfigProvider>
         </SolanaClientProvider>
+        <Toaster expand duration={3600000} />
       </body>
     </html>
   );

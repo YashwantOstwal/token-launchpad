@@ -126,7 +126,7 @@ function InputAddress({
                 ></WalletIcon>
               </InputGroupButton>
             </TooltipTrigger>
-            <TooltipContent>Sync with connected wallet addre</TooltipContent>
+            <TooltipContent>Sync with connected wallet</TooltipContent>
           </Tooltip>
           <InputGroupButton
             variant="outline"
