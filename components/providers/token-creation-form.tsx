@@ -6,27 +6,20 @@ import { z } from "zod";
 import { isAddress, isOffCurveAddress } from "@solana/kit";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-const address = z
-  .string()
-  .refine((value) => isAddress(value) && !isOffCurveAddress(value), {
-    message: "must be a valid account address",
-  });
+const address = z.string().refine((value) => isAddress(value) && true, {
+  message: "must be a valid ed-25519 address",
+});
 
 const requiredString = z
   .string({
-    error: "Length should atleast be 1",
+    error: "Required",
   })
   .min(1);
 const formSchema = z.object({
   // base: z.object({
   mintAuthority: address,
-  freezeAuthority: z
-    .string()
-    // .optional()
-    .refine((value) => value && isAddress(value) && !isOffCurveAddress(value), {
-      message: "must be a valid account address",
-    }),
-  decimals: z.number().min(0).max(9),
+  freezeAuthority: address.optional(),
+  decimals: z.number().nonnegative().min(0).max(9),
   // }),
   extensions: z
     .object({

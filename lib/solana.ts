@@ -46,7 +46,7 @@ type CreateMintTransactionMessage = {
   mint: KeyPairSigner<string>;
   decimals: number;
   mintAuthority: string;
-  freezeAuthority: string;
+  freezeAuthority?: string;
   extensions?: FormFields["extensions"];
 };
 

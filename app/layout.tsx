@@ -8,6 +8,7 @@ import {
   PrivyConfigProvider,
   PrivyAsSolanaWalletProvider,
 } from "@/components/providers/privy-as-solana-wallet";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const poppinsSans = Poppins({
   variable: "--font-poppins-sans",
@@ -46,8 +47,10 @@ export default function RootLayout({
           <PrivyConfigProvider appId="cmjuf6ftn021ml50cszzykcsu">
             <PrivyAsSolanaWalletProvider>
               <TokenCreationFormProvider>
-                <Navbar />
-                {children}
+                <TooltipProvider>
+                  <Navbar />
+                  {children}
+                </TooltipProvider>
               </TokenCreationFormProvider>
             </PrivyAsSolanaWalletProvider>
           </PrivyConfigProvider>

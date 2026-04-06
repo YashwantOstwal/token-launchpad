@@ -32,7 +32,7 @@ function FreezeAuthorityField() {
       label="Freeze Authority Address"
       placeholder="Enter your Freeze Authority Address"
       registrationField="freezeAuthority"
-      // optional
+      optional
     />
   );
 }

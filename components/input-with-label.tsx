@@ -15,13 +15,15 @@ import {
 } from "./providers/token-creation-form";
 import { InputError } from "./ui/input-error";
 import { ErrorOption } from "react-hook-form";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Description } from "./ui/description";
 import { Field, FieldDescription, FieldError, FieldLabel } from "./ui/field";
+import { Switch } from "./ui/switch";
 
 type InputWithLabelProps = React.ComponentProps<typeof InputGroupInput> & {
   label: string;
   registrationField: AllFieldPaths;
+  optional?: boolean;
 } & (
     | {
         type?: "text";
@@ -32,13 +34,38 @@ type InputWithLabelProps = React.ComponentProps<typeof InputGroupInput> & {
         defaultValue: number;
       }
   );
-function InputWithLabel({
-  label,
+
+function InputWithLabel({ optional, label, ...props }: InputWithLabelProps) {
+  const [isVisible, setIsVisible] = useState(true);
+  return (
+    <Field>
+      <div className="flex gap-2 items-center">
+        <FieldLabel htmlFor={props.registrationField} className="">
+          {label}
+        </FieldLabel>
+        {optional && (
+          <Switch
+            onClick={() => setIsVisible((prev) => !prev)}
+            checked={isVisible}
+          />
+        )}
+      </div>
+
+      <FieldDescription>
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Ipsam numquam
+        facere, cumque impedit ad quod. Molestiae quis accusamus delectus odit!
+      </FieldDescription>
+      {isVisible && <InputLabel {...props} />}
+    </Field>
+  );
+}
+
+function InputLabel({
   registrationField,
   type = "text",
   defaultValue,
   ...props
-}: InputWithLabelProps) {
+}: Omit<InputWithLabelProps, "label" | "optional">) {
   const {
     register,
     setValue,
@@ -62,35 +89,27 @@ function InputWithLabel({
     return () => unregister(registrationField);
   }, []);
   return (
-    <Field>
-      <FieldLabel htmlFor={registrationField}>{label}</FieldLabel>
-      <FieldDescription>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Ipsam numquam
-        facere, cumque impedit ad quod. Molestiae quis accusamus delectus odit!
-      </FieldDescription>
-      <div>
-        <InputGroup>
-          <InputGroupInput
-            id={registrationField}
-            type={type}
-            {...props}
-            {...register(registrationField, {
-              valueAsNumber: type === "text" ? false : true,
-              value: defaultValue,
-            })}
-          />
-          {type === "text" && (
-            <InputGroupAddon align="inline-end">
-              <InputGroupButton onClick={clearInput}>
-                <CircleXIcon />
-              </InputGroupButton>
-            </InputGroupAddon>
-          )}
-        </InputGroup>
-        <InputError error={error as undefined | ErrorOption} />
-      </div>
-    </Field>
+    <div>
+      <InputGroup>
+        <InputGroupInput
+          id={registrationField}
+          type={type}
+          {...props}
+          {...register(registrationField, {
+            valueAsNumber: type === "text" ? false : true,
+            value: defaultValue,
+          })}
+        />
+        {type === "text" && (
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton onClick={clearInput}>
+              <CircleXIcon />
+            </InputGroupButton>
+          </InputGroupAddon>
+        )}
+      </InputGroup>
+      <InputError error={error as undefined | ErrorOption} />
+    </div>
   );
 }
-
 export { InputWithLabel };

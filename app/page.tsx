@@ -10,7 +10,7 @@ import {
   type KeyPairSigner,
 } from "@solana/kit";
 import bs58 from "bs58";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/client";
 import { createMintTransactionMessage } from "@/lib/solana";
 import { useGenerateKeyPairSigner } from "@/hooks/use-generate-mint";
@@ -105,6 +105,7 @@ export default function Home() {
 
   const onSubmit = handleSubmit(async (data) => {
     if (!mint || !selectedWallet || !ready) return;
+    console.log(data);
 
     const walletAddress = selectedWallet.address as Address;
 
@@ -210,10 +211,10 @@ export default function Home() {
             {Object.entries(enabledExtensions)
               .filter(([_, value]) => value)
               .map(([key]) => (
-                <>
+                <React.Fragment key={key}>
                   {allExtensions[key as keyof typeof allExtensions]}
                   <FieldSeparator />
-                </>
+                </React.Fragment>
               ))}
             <Button
               type="submit"

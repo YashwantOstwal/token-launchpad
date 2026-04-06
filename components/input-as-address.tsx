@@ -7,7 +7,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@/components/ui/input-group";
-import { CircleXIcon } from "lucide-react";
+import { CircleXIcon, WalletIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useInputAsAddress } from "@/hooks/use-input-as-address";
@@ -18,10 +18,9 @@ import {
 import type { ErrorOption } from "react-hook-form";
 import { useEffect, useState } from "react";
 import { InputError } from "./ui/input-error";
-import { Description } from "./ui/description";
-import { address } from "@solana/kit";
 import { Field, FieldDescription, FieldLabel } from "./ui/field";
 import { Switch } from "./ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 function InputAsAddress({
   label,
@@ -34,7 +33,42 @@ function InputAsAddress({
   registrationField: AllFieldPaths;
   optional?: boolean;
 }) {
-  const [isNullable, setIsNullable] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  return (
+    <Field>
+      <div className="flex gap-2 items-center">
+        <FieldLabel htmlFor={registrationField} className="">
+          {label}
+        </FieldLabel>
+        {optional && (
+          <Switch
+            onClick={() => setIsVisible((prev) => !prev)}
+            checked={isVisible}
+          />
+        )}
+      </div>
+
+      <FieldDescription>
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Ipsam numquam
+        facere, cumque impedit ad quod. Molestiae quis accusamus delectus odit!
+      </FieldDescription>
+      {isVisible && (
+        <InputAddress
+          placeholder={placeholder}
+          registrationField={registrationField}
+        />
+      )}
+    </Field>
+  );
+}
+
+function InputAddress({
+  registrationField,
+  placeholder,
+}: {
+  registrationField: AllFieldPaths;
+  placeholder: string;
+}) {
   const { register, unregister, setValue, formState, trigger } =
     useMintCreationForm();
 
@@ -47,11 +81,10 @@ function InputAsAddress({
   } = useInputAsAddress(
     (value) => setValue(registrationField, value),
     () => trigger(registrationField),
-    optional && isNullable,
   );
 
   const { onChange, ...inputProps } = register(registrationField, {
-    disabled: optional && isNullable,
+    disabled: false,
     required: true,
   });
 
@@ -64,68 +97,48 @@ function InputAsAddress({
   useEffect(() => {
     return () => unregister(registrationField);
   }, []);
-
   return (
-    <Field>
-      <div className="flex gap-2 items-center">
-        <FieldLabel htmlFor={registrationField} className="">
-          {label}
-        </FieldLabel>
-        {optional && (
-          <Switch
-            onClick={() =>
-              setIsNullable((prev) => {
-                return !prev;
-              })
-            }
-            checked={!isNullable}
-          />
-        )}
-      </div>
-
-      <FieldDescription>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Ipsam numquam
-        facere, cumque impedit ad quod. Molestiae quis accusamus delectus odit!
-      </FieldDescription>
-      <div>
-        <InputGroup>
-          <InputGroupInput
-            id={registrationField}
-            placeholder={placeholder}
-            onChange={(e) => {
-              onChange(e);
-              setIsValueWalletAddress(false);
-            }}
-            {...inputProps}
-          />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton
-              variant="ghost"
-              className={cn(isValueWalletAddress && "bg-secondary")}
-              onClick={toggleIsValueWalletAddressAndUpdateInput}
-              disabled={isLoading}
-            >
-              <InputGroupText
-                className={cn(
-                  "hover:text-accent-foreground  transition-colors",
-                  isValueWalletAddress && "text-accent-foreground",
-                )}
+    <div>
+      <InputGroup>
+        <InputGroupInput
+          id={registrationField}
+          placeholder={placeholder}
+          onChange={(e) => {
+            onChange(e);
+            setIsValueWalletAddress(false);
+          }}
+          {...inputProps}
+        />
+        <InputGroupAddon align="inline-end">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <InputGroupButton
+                variant="outline"
+                className={cn(isValueWalletAddress && "bg-secondary")}
+                onClick={toggleIsValueWalletAddressAndUpdateInput}
+                disabled={isLoading}
               >
-                sync with wallet
-              </InputGroupText>
-            </InputGroupButton>
-            <InputGroupButton
-              className="transition-colors"
-              onClick={clearInput}
-            >
-              <CircleXIcon />
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
-        <InputError error={error as undefined | ErrorOption} />
-      </div>
-    </Field>
+                <WalletIcon
+                  className={cn(
+                    "hover:text-accent-foreground  transition-colors",
+                    isValueWalletAddress && "text-accent-foreground",
+                  )}
+                ></WalletIcon>
+              </InputGroupButton>
+            </TooltipTrigger>
+            <TooltipContent>Sync with connected wallet addre</TooltipContent>
+          </Tooltip>
+          <InputGroupButton
+            variant="outline"
+            className="transition-colors"
+            onClick={clearInput}
+          >
+            <CircleXIcon />
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+      <InputError error={error as undefined | ErrorOption} />
+    </div>
   );
 }
-
 export { InputAsAddress };
