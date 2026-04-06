@@ -164,6 +164,7 @@ export default function Home() {
                     placeholder="Your mint address"
                     value={mint ? mint.address : ""}
                     disabled
+                    className="disabled:opacity-75"
                   />
                   <InputGroupAddon align="inline-end">
                     <InputGroupButton onClick={generateNewMint}>
