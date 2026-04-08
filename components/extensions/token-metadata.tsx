@@ -21,7 +21,7 @@ function TokenMetadata() {
           registrationField="extensions.TokenMetadata.name"
           placeholder="USD coin"
           label="Name of your token"
-          defaultValue="Lorem"
+          defaultValue="Lorem ipsum"
         />
         <InputWithLabel
           registrationField="extensions.TokenMetadata.symbol"

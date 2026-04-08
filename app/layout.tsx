@@ -58,7 +58,7 @@ export default function RootLayout({
             </PrivyAsSolanaWalletProvider>
           </PrivyConfigProvider>
         </SolanaClientProvider>
-        <Toaster expand duration={3600000} />
+        <Toaster expand duration={3600000} closeButton />
       </body>
     </html>
   );
